@@ -58,4 +58,4 @@ class Config(object):
 
     @memoized_property
     def bundle_data(self):
-        return load('estimize-zipline-quandl')
+        return load('quantopian-quandl')

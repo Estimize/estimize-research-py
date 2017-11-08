@@ -63,6 +63,8 @@ class BetaCalculator(object):
             self.asset = asset
 
         def call(self):
+            print self.model
+
             self.data['beta'] = self.model.y_predict
 
             return self.data
