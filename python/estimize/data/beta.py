@@ -6,11 +6,14 @@ from estimize.data.core import *
 
 
 class BetaCalculator(object):
+
+    TRADING_DAYS_PER_YEAR_RATIO = (365.0 / 252.0) + 0.05
+
     def __init__(self,
                  start_date,
                  end_date,
                  assets,
-                 window_length=365
+                 window_length=252
                  ):
 
         self.start_date = get_valid_start_date(start_date)
@@ -51,7 +54,7 @@ class BetaCalculator(object):
 
     @memoized_property
     def windowed_start_date(self):
-        return self.start_date - timedelta(days=self.window_length)
+        return self.start_date - timedelta(days=self.window_length * self.TRADING_DAYS_PER_YEAR_RATIO)
 
     def get_asset_returns(self, asset):
         return self.assets_returns[self.assets_returns['symbol'] == asset].copy()
@@ -65,7 +68,7 @@ class BetaCalculator(object):
         def call(self):
             print self.model
 
-            self.data['beta'] = self.model.y_predict
+            self.data['beta'] = self.model.beta['benchmark_return']
 
             return self.data
 

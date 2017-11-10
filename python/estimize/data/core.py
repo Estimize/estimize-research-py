@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pandas as pd
 
 from zipline.data.loader import load_from_yahoo
@@ -51,7 +53,7 @@ def get_returns(start_date, end_date, assets=None):
     df.index.tz = TIMEZONE
     df.reset_index(inplace=True)
     df.rename(columns={'level_0': 'as_of_date', 'level_1': 'symbol'}, inplace=True)
-    df['as_of_date'] = df['as_of_date'].dt.date
+    df['as_of_date'] = df['as_of_date'].dt.date - timedelta(days=1)
     df.set_index(['as_of_date', 'symbol'], inplace=True)
 
     return df

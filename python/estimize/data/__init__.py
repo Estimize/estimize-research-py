@@ -5,6 +5,7 @@ from .core import (
     get_returns,
     get_universe,
     pipeline_engine,
+    get_asset,
     get_assets,
     trading_calendar
 )
@@ -16,6 +17,7 @@ __all__ = [
     'get_returns',
     'get_universe',
     'pipeline_engine',
+    'get_asset',
     'get_assets',
     'trading_calendar'
 ]
