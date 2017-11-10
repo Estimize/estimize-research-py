@@ -1,8 +1,9 @@
-import scipy.stats as ss
-
 from datetime import timedelta
+
+import pandas as pd
 from memoized_property import memoized_property
-from estimize.data.core import *
+
+from estimize.services import AssetServiceZiplineImpl
 
 
 class BetaCalculator(object):
@@ -13,12 +14,17 @@ class BetaCalculator(object):
                  start_date,
                  end_date,
                  assets,
+                 benchmark_asset=None,
                  window_length=252
                  ):
 
-        self.start_date = get_valid_start_date(start_date)
-        self.end_date = get_valid_end_date(end_date)
+        if benchmark_asset is None:
+            benchmark_asset = self.asset_service.get_asset('SPY')
+
+        self.start_date = self.asset_service.get_valid_trading_start_date(start_date)
+        self.end_date = self.asset_service.get_valid_trading_end_date(end_date)
         self.assets = assets
+        self.benchmark_asset = benchmark_asset
         self.window_length = window_length
 
     def call(self):
@@ -36,8 +42,9 @@ class BetaCalculator(object):
 
     @memoized_property
     def benchmark_returns(self):
-        brdf = get_benchmark_returns(self.windowed_start_date, self.end_date)
+        brdf = self.asset_service.get_returns(self.windowed_start_date, self.end_date, [self.benchmark_asset])
         brdf.reset_index(inplace=True)
+        brdf.drop(['symbol'], axis=1, inplace=True)
         brdf.rename(columns={'return': 'benchmark_return'}, inplace=True)
         brdf.set_index('as_of_date', inplace=True)
 
@@ -45,12 +52,16 @@ class BetaCalculator(object):
 
     @memoized_property
     def assets_returns(self):
-        ardf = get_returns(self.windowed_start_date, self.end_date, self.assets)
+        ardf = self.asset_service.get_returns(self.windowed_start_date, self.end_date, self.assets)
         ardf.reset_index(inplace=True)
         ardf.rename(columns={'return': 'asset_return'}, inplace=True)
         ardf.set_index('as_of_date', inplace=True)
 
         return ardf
+
+    @memoized_property
+    def asset_service(self):
+        return AssetServiceZiplineImpl()
 
     @memoized_property
     def windowed_start_date(self):
@@ -96,4 +107,4 @@ class BetaCalculator(object):
 
         @property
         def asset_returns(self):
-            return self.parent_calculator.get_asset_returns(self.asset)
+            return self.parent_calculator.get_returns_for_asset(self.asset)

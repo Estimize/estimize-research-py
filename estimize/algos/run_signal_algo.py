@@ -1,6 +1,5 @@
 from estimize.algos.signal_algo import *
 
-
 def main():
     run_algorithm(
         start=pd.to_datetime('2015-01-01').tz_localize('America/New_York'),

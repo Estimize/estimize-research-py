@@ -1,16 +1,22 @@
-import os
-import re
-
 from memoized_property import memoized_property
+from sqlalchemy import create_engine
+from zipline.assets import AssetDBWriter, AssetFinder
+from zipline.data.bundles import register
 from zipline.data.bundles.core import load
-from zipline.finance.trading import TradingEnvironment
 from zipline.pipeline import USEquityPricingLoader
 from zipline.pipeline.data import USEquityPricing
 from zipline.pipeline.engine import SimplePipelineEngine
 from zipline.utils.calendars import get_calendar
 
+from estimize.zipline.data.bundles.yahoo import yahoo_bundle
 
-class Config(object):
+
+class Config:
+
+    __bundles = dict()
+
+    def __init__(self, bundle_name='quantopian-quandl'):
+        self.bundle_name = bundle_name
 
     @memoized_property
     def pipeline_engine(self):
@@ -34,28 +40,33 @@ class Config(object):
 
     @memoized_property
     def asset_finder(self):
-        return self.trading_environment.asset_finder
+        AssetDBWriter(self.db_engine).init_db()
+
+        return AssetFinder(self.db_engine)
 
     @memoized_property
     def trading_calendar(self):
         return get_calendar('NYSE')
 
     @memoized_property
-    def trading_environment(self):
-        prefix, connstr = re.split(
-            r'sqlite:///',
-            str(self.bundle_data.asset_finder.engine.url),
-            maxsplit=1,
-        )
-
-        if prefix:
-            raise ValueError(
-                "invalid url %r, must begin with 'sqlite:///'" %
-                str(self.bundle_data.asset_finder.engine.url),
-            )
-
-        return TradingEnvironment(asset_db_path=connstr, environ=os.environ)
+    def db_engine(self):
+        return create_engine(self.bundle_data.asset_finder.engine.url)
 
     @memoized_property
     def bundle_data(self):
-        return load('quantopian-quandl')
+        return load(self.bundle_name)
+
+
+class YahooConfig(Config):
+
+    YAHOO_TICKERS = {
+        'SPY',
+    }
+
+    register(
+        'yahoo',
+        yahoo_bundle(YAHOO_TICKERS),
+    )
+
+    def __init__(self):
+        super(YahooConfig, self).__init__(bundle_name='yahoo')

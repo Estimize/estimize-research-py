@@ -7,13 +7,13 @@ from pandas_datareader.data import DataReader
 from zipline.utils.cli import maybe_show_progress
 
 
-def yahoo_bundle(tickers):
+def yahoo_bundle(symbols):
     """Create a data bundle ingest function from a set of symbols loaded from
     Yahoo.
 
     Parameters
     ----------
-    tickers : iterable[str]
+    symbols : iterable[str]
         The ticker symbols to load data for.
 
     Returns
@@ -29,7 +29,7 @@ def yahoo_bundle(tickers):
 
        from zipline.data.bundles import yahoo_equities, register
 
-       tickers = (
+       symbols = (
            'AAPL',
            'IBM',
            'MSFT',
@@ -40,26 +40,26 @@ def yahoo_bundle(tickers):
     -----
     The sids for each symbol will be the index into the symbols sequence.
     """
+
     # strict this in memory so that we can reiterate over it
-    tickers = tuple(tickers)
+    symbols = tuple(symbols)
 
     def ingest(environ,
                asset_db_writer,
-               minute_bar_writer,  # unused
+               minute_bar_writer,
                daily_bar_writer,
                adjustment_writer,
                calendar,
+               start_session,
+               end_session,
                cache,
                show_progress,
-               output_dir,
-               # pass these as defaults to make them 'nonlocal' in py2
-               start=None,
-               end=None):
+               output_dir):
 
-        if start is None:
-            start = calendar[0]
+        if start_session is None:
+            start_session = calendar[0]
 
-        metadata = pd.DataFrame(np.empty(len(tickers), dtype=[
+        metadata = pd.DataFrame(np.empty(len(symbols), dtype=[
             ('start_date', 'datetime64[ns]'),
             ('end_date', 'datetime64[ns]'),
             ('auto_close_date', 'datetime64[ns]'),
@@ -69,9 +69,9 @@ def yahoo_bundle(tickers):
         def _pricing_iter():
             sid = 0
             with maybe_show_progress(
-                    tickers,
+                    symbols,
                     show_progress,
-                    label='Downloading Google pricing data: ') as it, \
+                    label='Downloading Yahoo pricing data: ') as it, \
                     requests.Session() as session:
                 for ticker in it:
                     path = _cache_path(ticker, 'ohlcv')
@@ -81,8 +81,8 @@ def yahoo_bundle(tickers):
                         df = cache[path] = DataReader(
                             ticker,
                             'yahoo',
-                            start,
-                            end,
+                            start_session,
+                            end_session,
                             session=session,
                         ).sort_index()
 
@@ -101,6 +101,7 @@ def yahoo_bundle(tickers):
                             'Low': 'low',
                             'Close': 'close',
                             'Volume': 'volume',
+                            'Adj Close': 'price',
                         },
                         inplace=True,
                     )
@@ -109,52 +110,10 @@ def yahoo_bundle(tickers):
 
         daily_bar_writer.write(_pricing_iter(), show_progress=True)
 
-        symbol_map = pd.Series(metadata.symbol.index, metadata.symbol)
+        metadata['exchange'] = 'YAHOO'
         asset_db_writer.write(equities=metadata)
 
-        adjustments = []
-        with maybe_show_progress(
-                tickers,
-                show_progress,
-                label='Downloading Google adjustment data: ') as it, \
-                requests.Session() as session:
-            for symbol in it:
-                path = _cache_path(symbol, 'adjustment')
-                try:
-                    df = cache[path]
-                except KeyError:
-                    df = cache[path] = DataReader(
-                        symbol,
-                        'yahoo-actions',
-                        start,
-                        end,
-                        session=session,
-                    ).sort_index()
-
-                df['sid'] = symbol_map[symbol]
-                adjustments.append(df)
-
-        adj_df = pd.concat(adjustments)
-        adj_df.index.name = 'date'
-        adj_df.reset_index(inplace=True)
-
-        splits = adj_df[adj_df.action == 'SPLIT']
-        splits = splits.rename(
-            columns={'value': 'ratio', 'date': 'effective_date'},
-        )
-        splits.drop('action', axis=1, inplace=True)
-
-        dividends = adj_df[adj_df.action == 'DIVIDEND']
-        dividends = dividends.rename(
-            columns={'value': 'amount', 'date': 'ex_date'},
-        )
-        dividends.drop('action', axis=1, inplace=True)
-        # we do not have this data in the yahoo dataset
-        dividends['record_date'] = pd.NaT
-        dividends['declared_date'] = pd.NaT
-        dividends['pay_date'] = pd.NaT
-
-        adjustment_writer.write(splits=splits, dividends=dividends)
+        adjustment_writer.write()  # Needed to create the adjustments tables
 
     return ingest
 
