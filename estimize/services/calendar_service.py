@@ -14,3 +14,7 @@ class CalendarService:
     @abstractmethod
     def get_n_trading_days_from(self, n, date):
         raise NotImplementedError()
+
+    @abstractmethod
+    def get_trading_days_between(self, start_date, end_date):
+        raise NotImplementedError()

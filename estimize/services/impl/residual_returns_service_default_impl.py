@@ -10,8 +10,8 @@ from memoized_property import memoized_property
 from pandas_datareader.data import DataReader
 
 import estimize.config as cfg
-from estimize.pandas import cache, dfutils
-from estimize.services import ResidualReturnsService, CalendarService, AssetService
+from estimize.pandas import dfutils
+from estimize.services import ResidualReturnsService, CalendarService, AssetService, CacheService
 from estimize.services.estimize_consensus_service import EstimizeConsensusService
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,8 @@ counter = mp.Value('i', 0)
 class ResidualReturnsServiceDefaultImpl(ResidualReturnsService):
 
     @inject
-    def __init__(self, estimize_consensus_service: EstimizeConsensusService, calendar_service: CalendarService, asset_service: AssetService):
+    def __init__(self, cache_service: CacheService, estimize_consensus_service: EstimizeConsensusService, calendar_service: CalendarService, asset_service: AssetService):
+        self.cache_service = cache_service
         self.estimize_consensus_service = estimize_consensus_service
         self.calendar_service = calendar_service
         self.asset_service = asset_service
@@ -30,7 +31,7 @@ class ResidualReturnsServiceDefaultImpl(ResidualReturnsService):
         logger.info('market_neutral_residual_returns: start')
 
         cache_key = 'market_neutral_residual_returns_on_{}'.format(on)
-        df = cache.get(cache_key)
+        df = self.cache_service.get(cache_key)
 
         if df is None:
             assets = dfutils.unique_assets(self.estimize_consensus_service.get_final_consensuses())
@@ -40,7 +41,7 @@ class ResidualReturnsServiceDefaultImpl(ResidualReturnsService):
                 assets=assets,
                 on=on
             ).results()
-            cache.put(cache_key, df)
+            self.cache_service.put(cache_key, df)
 
         df = dfutils.filter(df, start_date, end_date, assets)
 
@@ -52,7 +53,7 @@ class ResidualReturnsServiceDefaultImpl(ResidualReturnsService):
         logger.info('multi_factor_residual_returns: start')
 
         cache_key = 'multi_factor_residual_returns_on_{}'.format(on)
-        df = cache.get(cache_key)
+        df = self.cache_service.get(cache_key)
 
         if df is None:
             assets = dfutils.unique_assets(self.estimize_consensus_service.get_final_consensuses())
@@ -62,7 +63,7 @@ class ResidualReturnsServiceDefaultImpl(ResidualReturnsService):
                 assets=assets,
                 on=on
             ).results()
-            cache.put(cache_key, df)
+            self.cache_service.put(cache_key, df)
 
         df = dfutils.filter(start_date, end_date, assets)
 
@@ -113,7 +114,7 @@ class ResidualReturnsQuery:
         self.pool.close()
         self.pool.join()
 
-        df = pd.concat(dfs)
+        df = pd.concat(dfs, copy=False)
 
         logger.info('results_async: end')
 
@@ -133,7 +134,7 @@ class ResidualReturnsQuery:
             bdf = self.get_residual_returns_for_asset(asset)
             dfs.append(bdf)
 
-        df = pd.concat(dfs)
+        df = pd.concat(dfs, copy=False)
 
         logger.info('results_debug: end')
 
@@ -288,7 +289,7 @@ class FamaFrenchResidualReturnsQuery(ResidualReturnsQuery):
          F-F_Research_Data_5_Factors_2x3_daily
         """
         fama_french_model = 'F-F_Research_Data_5_Factors_2x3_daily'
-        df = cache.get(fama_french_model)
+        df = self.cache_service.get(fama_french_model)
 
         if df is None:
             reader = DataReader(fama_french_model, 'famafrench')
@@ -298,7 +299,7 @@ class FamaFrenchResidualReturnsQuery(ResidualReturnsQuery):
 
             df = dfutils.filter(self.windowed_start_date, self.end_date)
 
-            cache.put(fama_french_model, df)
+            self.cache_service.put(fama_french_model, df)
 
         return df
 

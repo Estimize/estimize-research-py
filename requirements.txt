@@ -2,6 +2,7 @@ zipline == 1.1.1
 networkx < 2.0
 pandas == 0.18.1
 numpy
+matplotlib
 memoized_property
 pathos
 injector

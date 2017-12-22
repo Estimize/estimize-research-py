@@ -1,15 +1,16 @@
 import unittest
+import logging
 from injector import Injector
 
 from estimize.di.default_module import DefaultModule
 from estimize.services.impl import ResidualReturnsServiceDefaultImpl
-from estimize.services.impl.tests import configure_logging
+from estimize.logging import configure_logging
 
 
 class TestResidualReturnsServiceDefaultImpl(unittest.TestCase):
 
     def setUp(self):
-        configure_logging()
+        configure_logging(logging.DEBUG)
         injector = Injector([DefaultModule])
         self.service = injector.get(ResidualReturnsServiceDefaultImpl)
 

@@ -3,7 +3,7 @@ import pandas as pd
 from injector import inject
 from memoized_property import memoized_property
 
-from estimize.pandas import cache, dfutils
+from estimize.pandas import dfutils
 from estimize.services import CacheService, CsvDataService, EstimizeConsensusService, AssetService
 
 logger = logging.getLogger(__name__)
@@ -19,60 +19,60 @@ class EstimizeConsensusServiceDefaultImpl(EstimizeConsensusService):
         self.cache_service = cache_service
         self.asset_service = asset_service
 
-    def get_final_earnings_yields(self, start_date=None, end_date=None) -> pd.DataFrame:
+    def get_final_earnings_yields(self, start_date=None, end_date=None, assets=None) -> pd.DataFrame:
         logger.info('get_final_earnings_yields: start')
 
         cache_key = 'estimize_final_earnings_yields'
-        df = cache.get(cache_key)
+        df = self.cache_service.get(cache_key)
 
         if df is None:
             df = EarningsYieldQuery(self, self.asset_service, self.get_final_consensuses()).results()
-            cache.put(cache_key, df)
+            self.cache_service.put(cache_key, df)
 
-        df = dfutils.filter(df, start_date, end_date)
+        df = dfutils.filter(df, start_date, end_date, assets)
 
         logger.info('get_final_earnings_yields: end')
 
         return df
 
-    def get_earnings_yields(self, start_date=None, end_date=None) -> pd.DataFrame:
+    def get_earnings_yields(self, start_date=None, end_date=None, assets=None) -> pd.DataFrame:
         logger.info('get_earnings_yields: start')
 
         cache_key = 'estimize_earnings_yields'
-        df = cache.get(cache_key)
+        df = self.cache_service.get(cache_key)
 
         if df is None:
             df = EarningsYieldQuery(self, self.asset_service, self.get_consensuses()).results()
-            cache.put(cache_key, df)
+            self.cache_service.put(cache_key, df)
 
-        df = dfutils.filter(df, start_date, end_date)
+        df = dfutils.filter(df, start_date, end_date, assets)
 
         logger.info('get_earnings_yields: end')
 
         return df
 
-    def get_final_consensuses(self, start_date=None, end_date=None) -> pd.DataFrame:
+    def get_final_consensuses(self, start_date=None, end_date=None, assets=None) -> pd.DataFrame:
         logger.info('get_final_consensuses: start')
 
         cache_key = 'estimize_final_consensuses'
-        df = cache.get(cache_key)
+        df = self.cache_service.get(cache_key)
 
         if df is None:
             df = self.get_consensuses()
             df = df.iloc[df.index.get_level_values('as_of_date') == pd.to_datetime(df['reports_at_date'])]
-            cache.put(cache_key, df)
+            self.cache_service.put(cache_key, df)
 
-        df = dfutils.filter(df, start_date, end_date)
+        df = dfutils.filter(df, start_date, end_date, assets)
 
         logger.info('get_final_consensuses: end')
 
         return df
 
-    def get_consensuses(self, start_date=None, end_date=None) -> pd.DataFrame:
+    def get_consensuses(self, start_date=None, end_date=None, assets=None) -> pd.DataFrame:
         logger.info('get_consensuses: start')
 
         cache_key = 'estimize_consensuses'
-        df = cache.get(cache_key)
+        df = self.cache_service.get(cache_key)
 
         if df is None:
             url = 'https://s3.amazonaws.com/com.estimize.production.data/quantopian/consensus.csv'
@@ -89,9 +89,9 @@ class EstimizeConsensusServiceDefaultImpl(EstimizeConsensusService):
                 timezone='US/Eastern',
                 symbol_column='ticker'
             )
-            cache.put(cache_key, df)
+            self.cache_service.put(cache_key, df)
 
-        df = dfutils.filter(df, start_date, end_date)
+        df = dfutils.filter(df, start_date, end_date, assets)
 
         logger.info('get_consensuses: end')
 
@@ -100,6 +100,7 @@ class EstimizeConsensusServiceDefaultImpl(EstimizeConsensusService):
     @staticmethod
     def _pre_func(df):
         df.drop(['cusip'], axis=1, inplace=True)
+        df[['estimize.eps.count', 'estimize.revenue.count']] = df[['estimize.eps.count', 'estimize.revenue.count']].fillna(value=0).astype('int')
 
         return df
 
@@ -115,6 +116,28 @@ class EstimizeConsensusServiceDefaultImpl(EstimizeConsensusService):
         df['reports_at'] = df['reports_at'].dt.date
         df.rename(columns={'reports_at': 'reports_at_date'}, inplace=True)
         df.set_index(['as_of_date', 'asset'], inplace=True)
+        df = df[[
+            'fiscal_year',
+            'fiscal_quarter',
+            'reports_at_date',
+            'bmo',
+            'estimize.eps.weighted',
+            'estimize.eps.mean',
+            'estimize.eps.high',
+            'estimize.eps.low',
+            'estimize.eps.sd',
+            'estimize.eps.count',
+            'estimize.revenue.weighted',
+            'estimize.revenue.mean',
+            'estimize.revenue.high',
+            'estimize.revenue.low',
+            'estimize.revenue.sd',
+            'estimize.revenue.count',
+            'wallstreet.eps',
+            'wallstreet.revenue',
+            'actual.eps',
+            'actual.revenue'
+        ]]
 
         return df
 
@@ -127,13 +150,27 @@ class EarningsYieldQuery:
         self.consensuses = consensuses
 
     def results(self):
-        df = self.full_year_eps_values.join(self.moving_averages)
+        df = self.full_year_eps_values.join(self.moving_averages, how='inner')
         df['actual.eps.yield'] /= df['moving_average']
         df['estimize.eps.weighted.yield'] /= df['moving_average']
         df['estimize.eps.mean.yield'] /= df['moving_average']
+        df['estimize.eps.high.yield'] /= df['moving_average']
+        df['estimize.eps.low.yield'] /= df['moving_average']
         df['wallstreet.eps.yield'] /= df['moving_average']
-        df.dropna(inplace=True)
-        df.drop(['moving_average'], axis=1, inplace=True)
+        df = df[[
+            'fiscal_year',
+            'fiscal_quarter',
+            'reports_at_date',
+            'bmo',
+            'estimize.eps.weighted.yield',
+            'estimize.eps.mean.yield',
+            'estimize.eps.high.yield',
+            'estimize.eps.low.yield',
+            'estimize.eps.sd',
+            'estimize.eps.count',
+            'wallstreet.eps.yield',
+            'actual.eps.yield'
+        ]]
 
         return df
 
@@ -143,9 +180,11 @@ class EarningsYieldQuery:
 
     @property
     def full_year_eps_values(self):
-        df = self.consensuses_reindexed.join(self.trailing_3_quarter_eps_actuals)
+        df = self.consensuses_reindexed.join(self.trailing_3_quarter_eps_actuals, how='inner')
         df['actual.eps.yield'] = df['actual.eps'] + df['trailing_eps']
         df['estimize.eps.weighted.yield'] = df['estimize.eps.weighted'] + df['trailing_eps']
+        df['estimize.eps.high.yield'] = df['estimize.eps.high'] + df['trailing_eps']
+        df['estimize.eps.low.yield'] = df['estimize.eps.low'] + df['trailing_eps']
         df['estimize.eps.mean.yield'] = df['estimize.eps.mean'] + df['trailing_eps']
         df['wallstreet.eps.yield'] = df['wallstreet.eps'] + df['trailing_eps']
         df.reset_index(inplace=True)

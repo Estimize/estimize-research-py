@@ -41,6 +41,12 @@ class CalendarServiceZiplineImpl(CalendarService):
 
         return dates
 
+    def get_trading_days_between(self, start_date, end_date):
+        dates = self.trading_calendar.sessions_in_range(start_date, end_date)
+        dates = [d.replace(tzinfo=None) for d in dates]
+
+        return dates
+
     @property
     def trading_calendar(self):
         return self.config.trading_calendar

@@ -2,11 +2,11 @@ from injector import Module, singleton
 
 from estimize.services import (
     AssetService, AssetInfoService, CacheService, CalendarService, CsvDataService, EstimizeConsensusService,
-    ResidualReturnsService
+    EventStudyService, MarketCapService, ResidualReturnsService
 )
 from estimize.services.impl import (
     AssetInfoServiceDefaultImpl, CacheServiceDefaultImpl, EstimizeConsensusServiceDefaultImpl,
-    ResidualReturnsServiceDefaultImpl
+    EventStudyServiceDefaultImpl, MarketCapServiceDefaultImpl, ResidualReturnsServiceDefaultImpl
 )
 from estimize.services.impl.zipline import (
     Config, YahooConfig, AssetServiceZiplineImpl, CalendarServiceZiplineImpl, CsvDataServiceZiplineImpl
@@ -24,4 +24,6 @@ class DefaultModule(Module):
         binder.bind(CalendarService, to=CalendarServiceZiplineImpl, scope=singleton)
         binder.bind(CsvDataService, to=CsvDataServiceZiplineImpl, scope=singleton)
         binder.bind(EstimizeConsensusService, to=EstimizeConsensusServiceDefaultImpl, scope=singleton)
+        binder.bind(EventStudyService, to=EventStudyServiceDefaultImpl, scope=singleton)
+        binder.bind(MarketCapService, to=MarketCapServiceDefaultImpl, scope=singleton)
         binder.bind(ResidualReturnsService, to=ResidualReturnsServiceDefaultImpl, scope=singleton)

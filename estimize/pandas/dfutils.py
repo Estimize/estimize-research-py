@@ -20,13 +20,17 @@ def filter(df: pd.DataFrame, start_date=None, end_date=None, assets=None) -> pd.
 
 
 def unique_assets(df):
-    try:
-        df.index.names.index(ASSET_COLUMN)
-        values = df.index.get_level_values(ASSET_COLUMN)
-    except ValueError:
-        if any(col == ASSET_COLUMN for col in df.columns.names):
-            values = df[ASSET_COLUMN].unique()
-        else:
-            raise ValueError("{} does not contain a '{}' column!".format(type(df), ASSET_COLUMN))
+    return column_values(df, ASSET_COLUMN).unique().tolist()
 
-    return values.unique().tolist()
+
+def column_values(df, column):
+    try:
+        df.index.names.index(column)
+        values = df.index.get_level_values(column)
+    except ValueError:
+        if any(col == column for col in df.columns.names):
+            values = df[column]
+        else:
+            raise ValueError("{} does not contain a '{}' column!".format(type(df), column))
+
+    return values
