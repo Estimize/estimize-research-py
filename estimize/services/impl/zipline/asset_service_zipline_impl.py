@@ -8,6 +8,7 @@ from zipline.pipeline.filters import StaticAssets
 
 from estimize.services import AssetService, CalendarService
 from estimize.services.impl.zipline import Config, YahooConfig
+from estimize.zipline.pipeline.factors.technical import InterDayReturns, IntraDayReturns
 
 
 class AssetServiceZiplineImpl(AssetService):
@@ -27,8 +28,8 @@ class AssetServiceZiplineImpl(AssetService):
     def get_returns(self, start_date, end_date, assets=None) -> pd.DataFrame:
         return self.get_service(self.get_tickers(assets)).get_returns(start_date, end_date, assets)
 
-    def get_universe(self, start_date, end_date, assets=None) -> pd.DataFrame:
-        return self.asset_service.get_universe(start_date, end_date, assets)
+    def get_universe(self, start_date, end_date, assets=None, min_avg_dollar_vol=1e6, min_price=4.0) -> pd.DataFrame:
+        return self.asset_service.get_universe(start_date, end_date, assets, min_avg_dollar_vol, min_price)
 
     def get_service(self, tickers):
         if len(self.yahoo_config.YAHOO_TICKERS.intersection(tickers)) > 0:
@@ -38,7 +39,10 @@ class AssetServiceZiplineImpl(AssetService):
 
     @staticmethod
     def get_tickers(assets):
-        return set(asset.symbol for asset in assets)
+        if assets is not None:
+            return set(asset.symbol for asset in assets)
+        else:
+            return set()
 
     @memoized_property
     def asset_service(self):
@@ -77,11 +81,15 @@ class AssetServiceZiplineConfigImpl(AssetService):
     def get_returns(self, start_date, end_date, assets=None):
         open_return = Returns(window_length=2, inputs=[USEquityPricing.open])
         close_return = Returns(window_length=2, inputs=[USEquityPricing.close])
+        inter_day_return = InterDayReturns()
+        intra_day_return = IntraDayReturns()
 
         pipeline = Pipeline(
             columns={
                 'open_return': open_return,
-                'close_return': close_return
+                'close_return': close_return,
+                'inter_day_return': inter_day_return,
+                'intra_day_return': intra_day_return
             }
         )
 
@@ -94,13 +102,13 @@ class AssetServiceZiplineConfigImpl(AssetService):
 
         return df
 
-    def get_universe(self, start_date, end_date, assets=None):
+    def get_universe(self, start_date, end_date, assets=None, min_avg_dollar_vol=1e6, min_price=4.0):
         adv = AverageDollarVolume(window_length=20)
         latest_close = USEquityPricing.close.latest
 
         # min_market_cap = market_cap >= 100e6 # Need market cap data
-        min_adv = (adv >= 1e6)
-        min_latest_close = (latest_close >= 4)
+        min_adv = (adv >= min_avg_dollar_vol)
+        min_latest_close = (latest_close >= min_price)
         screen = (min_adv & min_latest_close)
 
         if assets is not None:
@@ -136,7 +144,10 @@ class AssetServiceZiplineConfigImpl(AssetService):
         df = self.pipeline_engine.run_pipeline(pipeline, start_date, end_date)
         df.index.rename(['as_of_date', 'asset'], inplace=True)
         df.reset_index(inplace=True)
-        df['as_of_date'] = df['as_of_date'].dt.tz_convert(self.TIMEZONE).dt.date
+        df = pd.pivot_table(df, index='as_of_date', columns='asset')
+        df = df.shift(-1).stack()
+        df.reset_index(inplace=True)
+        df['as_of_date'] = df['as_of_date'].dt.date
         df.set_index(['as_of_date', 'asset'], inplace=True)
 
         return df

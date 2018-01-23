@@ -19,6 +19,7 @@ class TestMarketCapServiceDefaultImpl(unittest.TestCase):
         self.assertFalse(df.empty)
 
         print(df)
+        print(df.index.get_level_values('as_of_date').max())
 
 
 if __name__ == '__main__':

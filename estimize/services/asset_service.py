@@ -23,5 +23,5 @@ class AssetService:
         raise NotImplementedError()
 
     @abstractmethod
-    def get_universe(self, start_date, end_date, assets=None) -> pd.DataFrame:
+    def get_universe(self, start_date, end_date, assets=None, min_avg_dollar_vol=1e6, min_price=4.0) -> pd.DataFrame:
         raise NotImplementedError()

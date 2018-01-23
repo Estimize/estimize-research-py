@@ -30,7 +30,7 @@ class MarketCapServiceDefaultImpl(MarketCapService):
             df.reset_index(inplace=True)
             df = pd.pivot_table(df, index='as_of_date', columns='asset', values='market_cap')
 
-            dates = self.calendar_service.get_trading_days_between(cfg.DEFAULT_START_DATE, cfg.DEFAULT_END_DATE)
+            dates = self.calendar_service.get_trading_days_between(cfg.DEFAULT_START_DATE, pd.Timestamp.now())
             dates = pd.DataFrame([], index=dates)
 
             df = dates.join(df, how='left')
