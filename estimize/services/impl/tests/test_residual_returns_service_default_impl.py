@@ -17,7 +17,7 @@ class TestResidualReturnsServiceDefaultImpl(unittest.TestCase):
     def test_market_neutral_residual_returns(self):
         start_date = '2017-01-01'
         end_date = '2017-02-01'
-        df = self.service.get_market_neutral_residual_returns(start_date, end_date)
+        df = self.service.get_market_neutral_residual_returns(start_date, end_date, on='open')
 
         self.assertIsNotNone(df)
         self.assertFalse(df.empty)
