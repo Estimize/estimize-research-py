@@ -3,8 +3,10 @@ from .asset_info_service import AssetInfoService
 from .cache_service import CacheService
 from .calendar_service import CalendarService
 from .csv_data_service import CsvDataService
+from .estimates_service import EstimatesService
 from .estimize_consensus_service import EstimizeConsensusService
 from .estimize_signal_service import EstimizeSignalService
 from .event_study_service import EventStudyService
+from .factor_service import FactorService
 from .market_cap_service import MarketCapService
-from .residual_returns_service import ResidualReturnsService
+from .releases_service import ReleasesService

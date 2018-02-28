@@ -17,6 +17,8 @@ class TestAssetInfoServiceDefaultImpl(unittest.TestCase):
         self.assertIsNotNone(df)
         self.assertFalse(df.empty)
 
+        print(df)
+
 
 if __name__ == '__main__':
     unittest.main()

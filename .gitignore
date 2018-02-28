@@ -1,5 +1,7 @@
 *.pyc
-.ipynb_checkpoints/
-/env
+/.cache
 /.virtualenv/
 /.python-version
+.ipynb_checkpoints/
+/env
+/estimize.egg-info

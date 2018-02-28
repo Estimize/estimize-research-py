@@ -24,8 +24,8 @@ class EstimizeSignalServiceDefaultImpl(EstimizeSignalService):
         df = self.cache_service.get(cache_key)
 
         if df is None:
-            df = self.csv_data_service.get_from_url(
-                url='{}/signal_time_series.csv'.format(cfg.ROOT_DATA_URL),
+            df = self.csv_data_service.get_from_file(
+                filename='{}/signal_time_series.csv'.format(cfg.data_dir()),
                 pre_func=self._pre_func,
                 post_func=self._post_func,
                 date_column='as_of',

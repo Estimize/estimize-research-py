@@ -1,6 +1,7 @@
 import unittest
 
 from injector import Injector
+import pandas as pd
 
 from estimize.di.default_module import DefaultModule
 from estimize.services import MarketCapService
@@ -18,8 +19,10 @@ class TestMarketCapServiceDefaultImpl(unittest.TestCase):
         self.assertIsNotNone(df)
         self.assertFalse(df.empty)
 
+        self.assertEquals(df.index.get_level_values('as_of_date')[0], pd.Timestamp('2012-01-31'))
+        self.assertEquals(df.index.get_level_values('as_of_date')[-1], pd.Timestamp('2017-12-29'))
+
         print(df)
-        print(df.index.get_level_values('as_of_date').max())
 
 
 if __name__ == '__main__':

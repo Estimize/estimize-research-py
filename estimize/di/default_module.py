@@ -2,12 +2,13 @@ from injector import Module, singleton
 
 from estimize.services import (
     AssetService, AssetInfoService, CacheService, CalendarService, CsvDataService, EstimizeConsensusService,
-    EstimizeSignalService, EventStudyService, MarketCapService, ResidualReturnsService
-)
+    EstimizeSignalService, EventStudyService, FactorService,
+    MarketCapService,
+    EstimatesService, ReleasesService)
 from estimize.services.impl import (
     AssetInfoServiceDefaultImpl, CacheServiceDefaultImpl, EstimizeConsensusServiceDefaultImpl,
-    EstimizeSignalServiceDefaultImpl, EventStudyServiceDefaultImpl, MarketCapServiceDefaultImpl, ResidualReturnsServiceDefaultImpl
-)
+    EstimizeSignalServiceDefaultImpl, EventStudyServiceDefaultImpl, FactorServiceDefaultImpl,
+    MarketCapServiceDefaultImpl, EstimatesServiceDefaultImpl, ReleasesServiceDefaultImpl)
 from estimize.services.impl.zipline import (
     Config, YahooConfig, AssetServiceZiplineImpl, CalendarServiceZiplineImpl, CsvDataServiceZiplineImpl
 )
@@ -23,8 +24,10 @@ class DefaultModule(Module):
         binder.bind(CacheService, to=CacheServiceDefaultImpl, scope=singleton)
         binder.bind(CalendarService, to=CalendarServiceZiplineImpl, scope=singleton)
         binder.bind(CsvDataService, to=CsvDataServiceZiplineImpl, scope=singleton)
+        binder.bind(EstimatesService, to=EstimatesServiceDefaultImpl, scope=singleton)
         binder.bind(EstimizeConsensusService, to=EstimizeConsensusServiceDefaultImpl, scope=singleton)
         binder.bind(EstimizeSignalService, to=EstimizeSignalServiceDefaultImpl, scope=singleton)
         binder.bind(EventStudyService, to=EventStudyServiceDefaultImpl, scope=singleton)
+        binder.bind(FactorService, to=FactorServiceDefaultImpl, scope=singleton)
         binder.bind(MarketCapService, to=MarketCapServiceDefaultImpl, scope=singleton)
-        binder.bind(ResidualReturnsService, to=ResidualReturnsServiceDefaultImpl, scope=singleton)
+        binder.bind(ReleasesService, to=ReleasesServiceDefaultImpl, scope=singleton)

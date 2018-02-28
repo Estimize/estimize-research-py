@@ -122,6 +122,7 @@ class AssetServiceZiplineConfigImpl(AssetService):
         )
 
         df = self._run_pipeline(pipeline, start_date, end_date)
+        df.drop(['latest_close'], axis=1, inplace=True)
 
         return df
 

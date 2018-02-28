@@ -29,8 +29,9 @@ class MarketCapServiceDefaultImpl(MarketCapService):
 
             df.reset_index(inplace=True)
             df = pd.pivot_table(df, index='as_of_date', columns='asset', values='market_cap')
+            end_date = df.index.get_level_values('as_of_date').max()
 
-            dates = self.calendar_service.get_trading_days_between(cfg.DEFAULT_START_DATE, pd.Timestamp.now())
+            dates = self.calendar_service.get_trading_days_between(cfg.DEFAULT_START_DATE, end_date)
             dates = pd.DataFrame([], index=dates)
 
             df = dates.join(df, how='left')

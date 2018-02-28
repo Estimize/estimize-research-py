@@ -73,14 +73,17 @@ class Cache:
 
 class LocalCache(Cache):
 
-    DEFAULT_CACHE_DIR = os.path.join(os.getcwd(), '.cache')
-
     @memoized_property
     def cache_dir(self):
-        if not os.path.exists(self.DEFAULT_CACHE_DIR):
-            os.mkdir(self.DEFAULT_CACHE_DIR)
+        if os.path.basename(os.getcwd()) == 'notebooks':
+            path = os.path.join(os.getcwd(), '../.cache')
+        else:
+            path = os.path.join(os.getcwd(), '.cache')
 
-        return self.DEFAULT_CACHE_DIR
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        return path
 
     class CacheItem(Cache.CacheItem):
 

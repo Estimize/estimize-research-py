@@ -20,8 +20,8 @@ class AssetInfoServiceDefaultImpl(AssetInfoService):
         df = self.cache_service.get(cache_key)
 
         if df is None:
-            df = self.csv_data_service.get_from_url(
-                url='{}/instruments.csv'.format(cfg.ROOT_DATA_URL),
+            df = self.csv_data_service.get_from_file(
+                filename='{}/instruments.csv'.format(cfg.data_dir()),
                 pre_func=self._pre_func,
                 post_func=self._post_func,
                 symbol_column='ticker'
@@ -41,8 +41,8 @@ class AssetInfoServiceDefaultImpl(AssetInfoService):
     @staticmethod
     def _post_func(df):
         df.reset_index(inplace=True)
-        df.drop(['dt', 'id'], axis=1, inplace=True)
-        df.rename(columns={'sid': 'asset'}, inplace=True)
+        df.drop(['dt'], axis=1, inplace=True)
+        df.rename(columns={'sid': 'asset', 'id': 'instrument_id'}, inplace=True)
         df.set_index(['asset'], inplace=True)
 
         return df

@@ -24,6 +24,13 @@ class CalendarServiceZiplineImpl(unittest.TestCase):
         self.assertEqual(dates[0], pd.Timestamp(start_date).replace(tzinfo=None))
         self.assertEqual(dates[-1], pd.Timestamp(end_date).replace(tzinfo=None))
 
+    def test_get_n_trading_days_from(self):
+        date = '2017-01-03'
+        days = self.service.get_n_trading_days_from(-1, date)
+
+        self.assertEqual(len(days), 1)
+        self.assertEqual(days[0], pd.Timestamp('2016-12-30').replace(tzinfo=None))
+
 
 if __name__ == '__main__':
     unittest.main()

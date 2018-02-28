@@ -3,6 +3,7 @@ import pandas as pd
 from injector import inject
 from memoized_property import memoized_property
 
+import estimize.config as cfg
 from estimize.pandas import dfutils
 from estimize.services import CacheService, CsvDataService, EstimizeConsensusService, AssetService
 
@@ -11,45 +12,11 @@ logger = logging.getLogger(__name__)
 
 class EstimizeConsensusServiceDefaultImpl(EstimizeConsensusService):
 
-    DEBUG = False
-
     @inject
     def __init__(self, csv_data_service: CsvDataService, cache_service: CacheService, asset_service: AssetService):
         self.csv_data_service = csv_data_service
         self.cache_service = cache_service
         self.asset_service = asset_service
-
-    def get_final_earnings_yields(self, start_date=None, end_date=None, assets=None) -> pd.DataFrame:
-        logger.info('get_final_earnings_yields: start')
-
-        cache_key = 'estimize_final_earnings_yields'
-        df = self.cache_service.get(cache_key)
-
-        if df is None:
-            df = EarningsYieldQuery(self, self.asset_service, self.get_final_consensuses()).results()
-            self.cache_service.put(cache_key, df)
-
-        df = dfutils.filter(df, start_date, end_date, assets)
-
-        logger.info('get_final_earnings_yields: end')
-
-        return df
-
-    def get_earnings_yields(self, start_date=None, end_date=None, assets=None) -> pd.DataFrame:
-        logger.info('get_earnings_yields: start')
-
-        cache_key = 'estimize_earnings_yields'
-        df = self.cache_service.get(cache_key)
-
-        if df is None:
-            df = EarningsYieldQuery(self, self.asset_service, self.get_consensuses()).results()
-            self.cache_service.put(cache_key, df)
-
-        df = dfutils.filter(df, start_date, end_date, assets)
-
-        logger.info('get_earnings_yields: end')
-
-        return df
 
     def get_final_consensuses(self, start_date=None, end_date=None, assets=None) -> pd.DataFrame:
         logger.info('get_final_consensuses: start')
@@ -75,13 +42,8 @@ class EstimizeConsensusServiceDefaultImpl(EstimizeConsensusService):
         df = self.cache_service.get(cache_key)
 
         if df is None:
-            url = 'https://s3.amazonaws.com/com.estimize.production.data/quantopian/consensus.csv'
-
-            if self.DEBUG:
-                url = 'https://s3.amazonaws.com/com.estimize.production.data/quantopian/consensus_trunc.csv'
-
-            df = self.csv_data_service.get_from_url(
-                url=url,
+            df = self.csv_data_service.get_from_file(
+                filename='{}/consensus.csv'.format(cfg.data_dir()),
                 pre_func=self._pre_func,
                 post_func=self._post_func,
                 date_column='date',

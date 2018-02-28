@@ -6,8 +6,7 @@ from injector import inject
 from memoized_property import memoized_property
 
 from estimize.pandas import dfutils
-from estimize.services import EventStudyService, CalendarService
-from estimize.services.residual_returns_service import ResidualReturnsService
+from estimize.services import EventStudyService, CalendarService, FactorService, AssetService
 
 logger = logging.getLogger(__name__)
 
@@ -15,14 +14,16 @@ logger = logging.getLogger(__name__)
 class EventStudyServiceDefaultImpl(EventStudyService):
 
     @inject
-    def __init__(self, calendar_service: CalendarService, residual_returns_service: ResidualReturnsService):
+    def __init__(self, calendar_service: CalendarService, factor_service: FactorService, asset_service: AssetService):
         self.calendar_service = calendar_service
-        self.residual_returns_service = residual_returns_service
+        self.factor_service = factor_service
+        self.asset_service = asset_service
 
     def run_event_study(self, events: pd.DataFrame, on='open', days_before=10, days_after=5) -> pd.DataFrame:
         return EventStudy(
             calendar_service=self.calendar_service,
-            residual_returns_service=self.residual_returns_service,
+            factor_service=self.factor_service,
+            asset_service=self.asset_service,
             events=events,
             on=on,
             days_before=days_before,
@@ -34,14 +35,16 @@ class EventStudy(object):
 
     def __init__(self,
                  calendar_service,
-                 residual_returns_service,
+                 factor_service,
+                 asset_service,
                  events,
                  on,
                  days_before=10,
                  days_after=5
                  ):
         self.calendar_service = calendar_service
-        self.residual_returns_service = residual_returns_service
+        self.factor_service = factor_service
+        self.asset_service = asset_service
         self.events = events
         self.on = on
         self.days_before = days_before
@@ -75,7 +78,7 @@ class EventStudy(object):
     def data(self):
         logger.debug('data: start')
 
-        df = self.windowed_events.join(self.residual_returns)
+        df = self.residual_returns
         df.fillna(0.0, inplace=True)
         df.reset_index(inplace=True)
         df.drop(['as_of_date', 'asset'], axis=1, inplace=True)
@@ -88,49 +91,59 @@ class EventStudy(object):
     def residual_returns(self):
         logger.debug('residual_returns: start')
 
-        df = self.residual_returns_service.get_market_neutral_residual_returns(
-            self.start_date,
-            self.end_date,
-            self.assets,
-            on=self.on
-        )['residual_return']
+        df = self.windowed_events.join(self.asset_returns)
+        df.reset_index(inplace=True)
+        df.set_index(['as_of_date'], inplace=True)
 
-        logger.debug('residual_returns: end')
+        df = df.join(self.benchmark_returns)
+        df['residual_return'] = df['return'] - (df['alpha'] + (df['beta'] * df['benchmark_return']))
+        df.drop(['benchmark_return', 'return', 'alpha', 'beta'], axis=1, inplace=True)
 
         return df
 
     @property
-    def assets(self):
-        logger.debug('assets: start')
+    def asset_returns(self):
+        logger.debug('asset_returns: start')
 
-        asset_list = dfutils.unique_assets(self.events)
+        df = self.asset_service.get_returns(self.start_date, self.end_date, self.assets)[[self.return_column]]
+        df.rename(columns={self.return_column: 'return'}, inplace=True)
 
-        logger.debug('assets: end')
+        logger.debug('asset_returns: end')
 
-        return asset_list
+        return df
+
+    @property
+    def benchmark_returns(self):
+        logger.debug('benchmark_returns: start')
+
+        spy = self.asset_service.get_asset('SPY')
+        df = self.asset_service.get_returns(self.start_date, self.end_date, [spy])[[self.return_column]]
+        df.reset_index(inplace=True)
+        df.set_index(['as_of_date'], inplace=True)
+        df.drop(['asset'], axis=1, inplace=True)
+        df.rename(columns={self.return_column: 'benchmark_return'}, inplace=True)
+
+        logger.debug('benchmark_returns: end')
+
+        return df
 
     @memoized_property
-    def start_date(self):
-        self.as_of_values.min() - timedelta(days=self.days_before)
-
-    @memoized_property
-    def end_date(self):
-        return self.as_of_values.max() + timedelta(days=self.days_after)
-
-    @memoized_property
-    def as_of_values(self):
-        return dfutils.column_values(self.events, 'as_of_date')
+    def return_column(self):
+        if self.on == 'open':
+            return 'open_return'
+        else:
+            return 'close_return'
 
     @property
     def windowed_events(self):
         logger.debug('windowed_events: start')
 
-        df = self.events
+        df = self.events_with_market_factors
         df['event_time'] = 0
 
         windows = []
 
-        for row in self.events.iterrows():
+        for row in df.iterrows():
             index = row[0]
             cols = row[1]
             date = index[0]
@@ -161,3 +174,63 @@ class EventStudy(object):
         logger.debug('windowed_events: end')
 
         return df
+
+    @property
+    def events_with_market_factors(self):
+        logger.debug('events_with_market_factors: start')
+
+        df = self.events_with_estimation_as_of_dates.join(self.market_factors, how='inner')
+        df.reset_index(inplace=True)
+        df.drop(['as_of_date'], axis=1, inplace=True)
+        df.rename(columns={'original_as_of_date': 'as_of_date'}, inplace=True)
+        df.set_index(['as_of_date', 'asset'], inplace=True)
+
+        logger.debug('events_with_market_factors: end')
+
+        return df
+
+    @property
+    def events_with_estimation_as_of_dates(self):
+        logger.debug('events_with_estimation_as_of_dates: start')
+
+        def shift_date(date):
+            return self.calendar_service.get_n_trading_days_from(-(self.days_before + 2), date)[0]
+
+        df = self.events.copy()
+        df['estimation_as_of_date'] = df.index.get_level_values('as_of_date').map(shift_date)
+        df.reset_index(inplace=True)
+        df.rename(columns={'as_of_date': 'original_as_of_date'}, inplace=True)
+        df.rename(columns={'estimation_as_of_date': 'as_of_date'}, inplace=True)
+        df.set_index(['as_of_date', 'asset'], inplace=True)
+
+        logger.debug('events_with_estimation_as_of_dates: end')
+
+        return df
+
+    @property
+    def market_factors(self):
+        logger.debug('market_factors: start')
+
+        df = self.factor_service.get_market_factors(self.start_date, self.end_date, self.assets)
+
+        logger.debug('market_factors: end')
+
+        return df
+
+    @property
+    def assets(self):
+        logger.debug('assets: start')
+
+        asset_list = dfutils.unique_assets(self.events)
+
+        logger.debug('assets: end')
+
+        return asset_list
+
+    @memoized_property
+    def start_date(self):
+        return self.events.index.get_level_values('as_of_date').min() - timedelta(days=self.days_before * 2)
+
+    @memoized_property
+    def end_date(self):
+        return self.events.index.get_level_values('as_of_date').max() + timedelta(days=self.days_after * 2)

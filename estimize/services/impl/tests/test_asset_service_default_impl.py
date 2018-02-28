@@ -34,6 +34,17 @@ class TestAssetServiceDefaultImpl(unittest.TestCase):
         self.assertAlmostEqual(test_df['close_return'][0], 0.03919738684, 6)
         self.assertAlmostEqual(test_df['expected_return'][0], test_df['close_return'][0], 6)
 
+    def test_get_moving_average(self):
+        start_date = '2014-01-01'
+        end_date = '2015-01-01'
+        assets = self.service.get_assets(['AAPL'])
+
+        df = self.service.get_moving_average(start_date, end_date, assets, 2)
+        self.assertIsNotNone(df)
+        self.assertFalse(df.empty)
+
+        print(df)
+
 
 if __name__ == '__main__':
     unittest.main()

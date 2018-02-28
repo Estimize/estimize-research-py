@@ -1,6 +1,12 @@
 Estimize Research
 =================
 
+Event Studies
+-------------
+
+* [Post-Earnings Surprise](/notebooks/post_earnings_event_study.ipynb)
+* [Thru-Earnings WS/Estimize Delta](/notebooks/thru_earnings_ws_estimize_delta_event_study.ipynb)
+
 Getting Started
 ---------------
 
@@ -19,6 +25,29 @@ We recommend using `virtualenv` and Python 3:
     python3 -m virtualenv env
     source env/bin/activate
     pip install -r requirements.txt
+    pip install -e .
+
+
+### Load and cache the data files
+
+Make sure you have the following files added to the `./data` directory:
+
+    .
+    ├── data
+    │   ├── consensus.csv
+    │   ├── estimates.csv
+    │   ├── instruments.csv
+    │   ├── releases.csv
+    │   ├── signal_time_series.csv
+    │   └── users.csv
+
+To request the files please contact <sales@estimize.com>.
+
+Run the following command:
+
+    estimize init
+
+It may take some time to load and cache the required CSV files, please be patient.
 
 You can now launch Jupyter Notebook: `env/bin/jupyter notebook`
 
