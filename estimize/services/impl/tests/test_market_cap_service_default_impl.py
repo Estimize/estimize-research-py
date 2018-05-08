@@ -20,7 +20,7 @@ class TestMarketCapServiceDefaultImpl(unittest.TestCase):
         self.assertFalse(df.empty)
 
         self.assertEquals(df.index.get_level_values('as_of_date')[0], pd.Timestamp('2012-01-31'))
-        self.assertEquals(df.index.get_level_values('as_of_date')[-1], pd.Timestamp('2017-12-29'))
+        self.assertEquals(df.index.get_level_values('as_of_date')[-1], pd.Timestamp('2018-03-29'))
 
         print(df)
 

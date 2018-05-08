@@ -17,8 +17,8 @@ class TestFactorServiceDefaultImpl(unittest.TestCase):
         self.service = injector.get(FactorService)
 
     def test_get_betas(self):
-        start_date = '2017-12-21'
-        end_date = '2018-01-01'
+        start_date = '2012-01-01'
+        end_date = '2018-03-31'
         assets = self.asset_service.get_assets(['AMZN', 'AAPL', 'GOOGL', 'CMG'])
         df = self.service.get_market_factors(start_date, end_date, assets)
 

@@ -25,33 +25,8 @@ def main():
 @main.command()
 def init():
     print('Initializing...')
-    from zipline.data.bundles import register
-    from estimize.zipline.data.bundles.yahoo import yahoo_bundle
 
-    tickers = {
-        'SPY',
-    }
-
-    register(
-        'yahoo',
-        yahoo_bundle(tickers),
-    )
-
-    bundles_module.ingest(
-        'yahoo',
-        os.environ,
-        pd.Timestamp.utcnow(),
-        [],
-        True,
-    )
-
-    bundles_module.ingest(
-        'quantopian-quandl',
-        os.environ,
-        pd.Timestamp.utcnow(),
-        [],
-        True,
-    )
+    load_data()
 
     injector = Injector([DefaultModule])
     asset_info_service = injector.get(AssetInfoService)
@@ -85,6 +60,44 @@ def init():
                 item[1]()
             except:
                 print('\nERROR: {}'.format(item[2].format(item[0])))
+
+
+@main.command()
+def update():
+    print('Updating...')
+
+    load_data()
+
+
+def load_data():
+    print('Loading data...')
+    from zipline.data.bundles import register
+    from estimize.zipline.data.bundles.yahoo import yahoo_bundle
+
+    tickers = {
+        'SPY',
+    }
+
+    register(
+        'yahoo',
+        yahoo_bundle(tickers),
+    )
+
+    bundles_module.ingest(
+        'yahoo',
+        os.environ,
+        pd.Timestamp.utcnow(),
+        [],
+        True,
+    )
+
+    bundles_module.ingest(
+        'quantopian-quandl',
+        os.environ,
+        pd.Timestamp.utcnow(),
+        [],
+        True,
+    )
 
 
 if __name__ == '__main__':
