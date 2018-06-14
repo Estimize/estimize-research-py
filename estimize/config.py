@@ -11,6 +11,6 @@ ROOT_DATA_URL = 'https://s3.amazonaws.com/{}/research/{}'.format(S3_DATA_BUCKET,
 
 def data_dir():
     if os.path.basename(os.getcwd()) == 'notebooks':
-        return os.path.join(os.getcwd(), '../data')
+        return os.path.join(os.getcwd(), os.pardir, 'data')
     else:
         return os.path.join(os.getcwd(), 'data')

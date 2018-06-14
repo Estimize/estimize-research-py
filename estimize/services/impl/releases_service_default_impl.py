@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from injector import inject
 
@@ -21,7 +22,7 @@ class ReleasesServiceDefaultImpl(ReleasesService):
             adf = self.asset_info_service.get_asset_info().reset_index()[['asset', 'instrument_id']]
             adf.set_index('instrument_id', inplace=True)
 
-            df = pd.read_csv('{}/releases.csv'.format(cfg.data_dir()))
+            df = pd.read_csv(os.path.join(cfg.data_dir(), 'releases.csv'))
             df.rename(columns={'id': 'release_id'}, inplace=True)
             df.set_index('instrument_id', inplace=True)
 

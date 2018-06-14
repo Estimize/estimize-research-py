@@ -1,16 +1,14 @@
-import errno
 import os
-import pandas as pd
-from functools import wraps
+import sys
 
 import click
 import logbook
+import pandas as pd
 from injector import Injector
-
 from zipline.data import bundles as bundles_module
 
 from estimize.di.default_module import DefaultModule
-from estimize.services import AssetService, AssetInfoService, EstimatesService, ReleasesService, \
+from estimize.services import AssetInfoService, EstimatesService, ReleasesService, \
     EstimizeConsensusService, EstimizeSignalService, MarketCapService, FactorService
 
 
@@ -59,6 +57,7 @@ def init():
             try:
                 item[1]()
             except:
+                print('Unexpected error:', sys.exc_info()[0])
                 print('\nERROR: {}'.format(item[2].format(item[0])))
 
 

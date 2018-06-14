@@ -1,5 +1,5 @@
 import logging
-
+import os
 from injector import inject
 
 import estimize.config as cfg
@@ -56,7 +56,7 @@ class FactorServiceDefaultImpl(FactorService):
                 csv_df['ticker'] = csv_df['asset'].map(lambda a: a.symbol)
                 csv_df.drop(['asset'], axis=1, inplace=True)
                 csv_df.set_index(['as_of_date', 'ticker'], inplace=True)
-                csv_df.to_csv('{}/market_factors.csv'.format(cfg.data_dir()))
+                csv_df.to_csv(os.path.join(cfg.data_dir(), 'market_factors.csv'))
 
             self.cache_service.put(cache_key, df)
 

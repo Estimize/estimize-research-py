@@ -1,4 +1,5 @@
 import logging
+import os
 import pandas as pd
 from injector import inject
 from memoized_property import memoized_property
@@ -43,7 +44,7 @@ class EstimizeConsensusServiceDefaultImpl(EstimizeConsensusService):
 
         if df is None:
             df = self.csv_data_service.get_from_file(
-                filename='{}/consensus.csv'.format(cfg.data_dir()),
+                filename=os.path.join(cfg.data_dir(), 'consensus.csv'),
                 pre_func=self._pre_func,
                 post_func=self._post_func,
                 date_column='date',

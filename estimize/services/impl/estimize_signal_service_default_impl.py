@@ -1,5 +1,5 @@
 import logging
-
+import os
 from injector import inject
 
 import estimize.config as cfg
@@ -25,7 +25,7 @@ class EstimizeSignalServiceDefaultImpl(EstimizeSignalService):
 
         if df is None:
             df = self.csv_data_service.get_from_file(
-                filename='{}/signal_time_series.csv'.format(cfg.data_dir()),
+                filename=os.path.join(cfg.data_dir(), 'signal_time_series.csv'),
                 pre_func=self._pre_func,
                 post_func=self._post_func,
                 date_column='as_of',

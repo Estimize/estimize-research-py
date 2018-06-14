@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from injector import inject
 
@@ -18,7 +19,7 @@ class EstimatesServiceDefaultImpl(EstimatesService):
         df = self.cache_service.get(cache_key)
 
         if df is None:
-            df = pd.read_csv('{}/estimates.csv'.format(cfg.data_dir()))
+            df = pd.read_csv(os.path.join(cfg.data_dir(), 'estimates.csv'))
             df['created_at'] = pd.to_datetime(df['created_at'])
             df.set_index(['created_at', 'release_id'], inplace=True)
 

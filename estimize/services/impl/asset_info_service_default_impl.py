@@ -1,4 +1,5 @@
 from injector import inject
+import os
 import pandas as pd
 
 import estimize.config as cfg
@@ -21,7 +22,7 @@ class AssetInfoServiceDefaultImpl(AssetInfoService):
 
         if df is None:
             df = self.csv_data_service.get_from_file(
-                filename='{}/instruments.csv'.format(cfg.data_dir()),
+                filename=os.path.join(cfg.data_dir(), 'instruments.csv'),
                 pre_func=self._pre_func,
                 post_func=self._post_func,
                 symbol_column='ticker'
