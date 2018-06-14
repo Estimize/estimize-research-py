@@ -18,7 +18,7 @@ Getting Started
 
 ### Setup your Python environment and dependencies
 
-We recommend using `virtualenv` and Python 3:
+We recommend using `virtualenv` and Python 3.5 (make sure you are NOT using Python 3.6):
 
     python3 -m pip install --user --upgrade pip
     python3 -m pip install --user virtualenv

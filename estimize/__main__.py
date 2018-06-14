@@ -1,5 +1,5 @@
 import os
-import sys
+import traceback
 
 import click
 import logbook
@@ -57,8 +57,8 @@ def init():
             try:
                 item[1]()
             except:
-                print('Unexpected error:', sys.exc_info()[0])
                 print('\nERROR: {}'.format(item[2].format(item[0])))
+                traceback.print_exc()
 
 
 @main.command()
