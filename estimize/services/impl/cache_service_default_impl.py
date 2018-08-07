@@ -3,6 +3,8 @@ import tempfile
 from abc import abstractmethod
 
 import boto3
+from botocore import UNSIGNED
+from botocore.client import Config
 import botocore
 import pandas as pd
 from memoized_property import memoized_property
@@ -17,15 +19,7 @@ class CacheServiceDefaultImpl(CacheService):
         self.local_cache.put(key, df)
 
     def get(self, key: str) -> pd.DataFrame:
-        df = self.local_cache.get(key)
-
-        if df is None:
-            df = self.remote_cache.get(key)
-
-            if df is not None:
-                self.local_cache.put(key, df)
-
-        return df
+        return self.local_cache.get(key)
 
     @memoized_property
     def local_cache(self):
@@ -115,7 +109,7 @@ class RemoteCache(Cache):
 
     @memoized_property
     def s3_bucket(self):
-        return boto3.resource('s3', region_name='us-east-1').Bucket(cfg.S3_DATA_BUCKET)
+        return boto3.resource('s3', region_name='us-east-1', config=Config(signature_version=UNSIGNED)).Bucket(cfg.S3_DATA_BUCKET)
 
     class CacheItem(Cache.CacheItem):
 
