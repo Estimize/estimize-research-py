@@ -35,28 +35,13 @@ class FactorServiceDefaultImpl(FactorService):
         df = self.cache_service.get(cache_key)
 
         if df is None:
-            try:
-                df = self.csv_data_service.get_from_url(
-                    url='{}/market_factors.csv'.format(cfg.ROOT_DATA_URL),
-                    post_func=self._post_func,
-                    date_column='as_of_date',
-                    timezone='US/Eastern',
-                    symbol_column='ticker'
-                )
-            except:
-                assets = dfutils.unique_assets(self.estimize_consensus_service.get_final_consensuses())
-                df = MarketFactorModelQuery(
-                    asset_service=self.asset_service,
-                    calendar_service=self.calendar_service,
-                    assets=assets
-                ).results()
-
-                # Save the generated file as a csv
-                csv_df = df.reset_index()
-                csv_df['ticker'] = csv_df['asset'].map(lambda a: a.symbol)
-                csv_df.drop(['asset'], axis=1, inplace=True)
-                csv_df.set_index(['as_of_date', 'ticker'], inplace=True)
-                csv_df.to_csv(os.path.join(cfg.data_dir(), 'market_factors.csv'))
+            df = self.csv_data_service.get_from_url(
+                url='{}/market_factors.csv'.format(cfg.ROOT_DATA_URL),
+                post_func=self._post_func,
+                date_column='as_of_date',
+                timezone='US/Eastern',
+                symbol_column='ticker'
+            )
 
             self.cache_service.put(cache_key, df)
 
@@ -65,6 +50,33 @@ class FactorServiceDefaultImpl(FactorService):
         logger.info('get_market_factors: end')
 
         return df
+
+    def build_market_factors(self):
+        try:
+            fdf = self.get_market_factors()
+            start_date = fdf.index.get_level_values('as_of_date').max()
+        except:
+            logger.exception('Error while loading market_factors.csv')
+            fdf = None
+            start_date = cfg.DEFAULT_START_DATE
+
+        assets = dfutils.unique_assets(self.estimize_consensus_service.get_final_consensuses())
+        df = MarketFactorModelQuery(
+            asset_service=self.asset_service,
+            calendar_service=self.calendar_service,
+            assets=assets,
+            start_date=start_date
+        ).results()
+
+        if fdf is not None:
+            df = fdf.combine_first(df)
+
+        # Save the generated file as a csv
+        csv_df = df.reset_index()
+        csv_df['ticker'] = csv_df['asset'].map(lambda a: a.symbol)
+        csv_df.drop(['asset'], axis=1, inplace=True)
+        csv_df.set_index(['as_of_date', 'ticker'], inplace=True)
+        csv_df.to_csv(os.path.join(cfg.data_dir(), 'market_factors.csv'))
 
     @staticmethod
     def _post_func(df):
@@ -83,10 +95,17 @@ class MarketFactorModelQuery:
     ASYNC_DEBUG = False
     DEBUG = False
 
-    def __init__(self, asset_service: AssetService, calendar_service: CalendarService, assets, window_length=126):
+    def __init__(self,
+                 asset_service: AssetService,
+                 calendar_service: CalendarService,
+                 assets,
+                 start_date=cfg.DEFAULT_START_DATE,
+                 window_length=126
+                 ):
         self.asset_service = asset_service
         self.calendar_service = calendar_service
         self.assets = assets
+        self._start_date = start_date
         self.window_length = window_length
         self.pool = pp.ProcessPool(mp.cpu_count())
 
@@ -169,7 +188,7 @@ class MarketFactorModelQuery:
 
     @memoized_property
     def start_date(self):
-        return self.calendar_service.get_valid_trading_start_date(cfg.DEFAULT_START_DATE)
+        return self.calendar_service.get_valid_trading_start_date(self._start_date)
 
     @memoized_property
     def end_date(self):
