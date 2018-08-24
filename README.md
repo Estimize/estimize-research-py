@@ -59,3 +59,9 @@ Launch Jupyter Notebooks: `env/bin/jupyter notebook`
 You can open a notebook by navigating to `notebooks` in Jupyter Notebook and clicking on the desired notebook (i.e. `post_earnings_event_study.ipynb`).
 
 Once you have opened a notebook, you can re-generate the notebook results by selecting `Kernel` > `Restart & Run All` from the notebook menu.
+
+### Rendering Notebooks as PDFs
+
+In the notebooks directory run:
+
+`jupyter nbconvert --to pdf --template hidecode <notebook-name>`
